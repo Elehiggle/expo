@@ -2,7 +2,7 @@ import ExpoModulesCore
 import EventKit
 internal import React
 
-public class CalendarPermissionsRequester: NSObject, EXPermissionsRequester {
+public class RemindersNextPermissionRequester: NSObject, EXPermissionsRequester {
   private let eventStore: EKEventStore
 
   init(eventStore: EKEventStore) {
@@ -10,27 +10,12 @@ public class CalendarPermissionsRequester: NSObject, EXPermissionsRequester {
   }
 
   static public func permissionType() -> String {
-    return "calendar"
+    return "reminders"
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
     var status: EXPermissionStatus
-    var permissions: EKAuthorizationStatus
-
-    let description = {
-      if #available(iOS 17.0, *) {
-        return "NSCalendarsFullAccessUsageDescription"
-      }
-      return "NSCalendarsUsageDescription"
-    }()
-
-    if Bundle.main.object(forInfoDictionaryKey: description) != nil {
-      permissions = EKEventStore.authorizationStatus(for: .event)
-    } else {
-      permissions = .denied
-    }
-
-    switch permissions {
+    switch EKEventStore.authorizationStatus(for: .reminder) {
     case .restricted, .denied, .writeOnly:
       status = EXPermissionStatusDenied
     case .notDetermined:
@@ -41,28 +26,28 @@ public class CalendarPermissionsRequester: NSObject, EXPermissionsRequester {
       status = EXPermissionStatusUndetermined
     }
 
-    return ["status": status.rawValue]
+    return ["status": status.rawValue, "canAskAgain": status == EXPermissionStatusUndetermined]
   }
 
   public func requestPermissions(resolver resolve: @escaping EXPromiseResolveBlock, rejecter reject: @escaping EXPromiseRejectBlock) {
     if #available(iOS 17.0, *) {
-      eventStore.requestFullAccessToEvents { [weak self] _, error in
+      eventStore.requestFullAccessToReminders { [weak self] _, error in
         guard let self else {
           return
         }
         if let error {
-          reject("E_CALENDAR_ERROR_UNKNOWN", error.localizedDescription, error)
+          reject("E_REMINDERS_ERROR_UNKNOWN", error.localizedDescription, error)
         } else {
           resolve(self.getPermissions())
         }
       }
     } else {
-      eventStore.requestAccess(to: .event) { [weak self] _, error in
+      eventStore.requestAccess(to: .reminder) { [weak self] _, error in
         guard let self else {
           return
         }
         if let error {
-          reject("E_CALENDAR_ERROR_UNKNOWN", error.localizedDescription, error)
+          reject("E_REMINDERS_ERROR_UNKNOWN", error.localizedDescription, error)
         } else {
           resolve(self.getPermissions())
         }

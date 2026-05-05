@@ -11,6 +11,7 @@ public final class CalendarNextModule: Module {
   private var calendarDialogDelegate: CalendarDialogDelegate?
   private var calendarPickerDelegate: CalendarPickerDelegate?
   private var calendarPermissions: ExpoCalendarPermissions?
+  private var calendarPermissionsDelegate: CalendarPermissionsDelegate?
 
   // swiftlint:disable:next function_body_length cyclomatic_complexity
   public func definition() -> ModuleDefinition {
@@ -18,10 +19,12 @@ public final class CalendarNextModule: Module {
 
     OnCreate {
       self.appContext?.permissions?.register([
-        CalendarPermissionsRequester(eventStore: eventStore),
-        RemindersPermissionRequester(eventStore: eventStore)
+        CalendarNextPermissionsRequester(eventStore: eventStore),
+        CalendarWriteOnlyPermissionsRequester(eventStore: eventStore),
+        RemindersNextPermissionRequester(eventStore: eventStore)
       ])
       self.calendarPermissions = ExpoCalendarPermissions(eventStore: eventStore, appContext: appContext)
+      self.calendarPermissionsDelegate = CalendarPermissionsDelegate(appContext: appContext)
       self.calendarPermissions?.initializePermittedEntities()
     }
 
@@ -85,7 +88,7 @@ public final class CalendarNextModule: Module {
       let calendar: EKCalendar
       switch calendarRecord.entityType {
       case .event:
-        try calendarPermissions?.checkCalendarPermissions()
+        try calendarPermissions?.checkCalendarWritePermissions()
         calendar = EKCalendar(for: .event, eventStore: eventStore)
       case .reminder:
         try calendarPermissions?.checkRemindersPermissions()
@@ -158,25 +161,17 @@ public final class CalendarNextModule: Module {
       return ExpoCalendarReminder(reminder: reminder)
     }
 
-    AsyncFunction("getCalendarPermissions") { (promise: Promise) in
-      appContext?.permissions?.getPermissionUsingRequesterClass(
-        CalendarPermissionsRequester.self,
-        resolve: promise.legacyResolver,
-        reject: promise.legacyRejecter
-      )
+    AsyncFunction("getCalendarPermissions") { (writeOnly: Bool?, promise: Promise) in
+      try calendarPermissionsDelegate?.getCalendarPermissions(writeOnly ?? false, promise: promise)
     }
 
-    AsyncFunction("requestCalendarPermissions") { (promise: Promise) in
-      appContext?.permissions?.askForPermission(
-        usingRequesterClass: CalendarPermissionsRequester.self,
-        resolve: promise.legacyResolver,
-        reject: promise.legacyRejecter
-      )
+    AsyncFunction("requestCalendarPermissions") { (writeOnly: Bool?, promise: Promise) in
+      try calendarPermissionsDelegate?.requestCalendarPermissions(writeOnly ?? false, promise: promise)
     }
 
     AsyncFunction("getRemindersPermissions") { (promise: Promise) in
       appContext?.permissions?.getPermissionUsingRequesterClass(
-        RemindersPermissionRequester.self,
+        RemindersNextPermissionRequester.self,
         resolve: promise.legacyResolver,
         reject: promise.legacyRejecter
       )
@@ -184,7 +179,7 @@ public final class CalendarNextModule: Module {
 
     AsyncFunction("requestRemindersPermissions") { (promise: Promise) in
       appContext?.permissions?.askForPermission(
-        usingRequesterClass: RemindersPermissionRequester.self,
+        usingRequesterClass: RemindersNextPermissionRequester.self,
         resolve: promise.legacyResolver,
         reject: promise.legacyRejecter)
     }
@@ -293,7 +288,7 @@ public final class CalendarNextModule: Module {
 
       // swiftlint:enable closure_parameter_position
       AsyncFunction("createEvent") { (expoCalendar: ExpoCalendar, eventRecord: EventNext, options: RecurringEventOptions?) -> ExpoCalendarEvent in
-        try calendarPermissions?.checkCalendarPermissions()
+        try calendarPermissions?.checkCalendarWritePermissions()
 
         guard let calendar = expoCalendar.calendar else {
           throw CalendarNoLongerExistsException()
@@ -469,7 +464,7 @@ public final class CalendarNextModule: Module {
       }
 
       AsyncFunction("openInCalendar") { (expoEvent: ExpoCalendarEvent, options: OpenInCalendarOptions?, promise: Promise) in
-        try calendarPermissions?.checkCalendarPermissions()
+        try calendarPermissions?.checkCalendarWritePermissions()
 
         let startDate = parse(date: options?.instanceStartDate)
         guard let calendarEvent = expoEvent.getOccurrence(startDate: startDate) else {
@@ -504,7 +499,7 @@ public final class CalendarNextModule: Module {
       }.runOnQueue(.main)
 
       AsyncFunction("editInCalendar") { (expoEvent: ExpoCalendarEvent, _: OpenInCalendarOptions?, promise: Promise) in
-        try calendarPermissions?.checkCalendarPermissions()
+        try calendarPermissions?.checkCalendarWritePermissions()
 
         guard let event = expoEvent.event else {
           throw ItemNoLongerExistsException()

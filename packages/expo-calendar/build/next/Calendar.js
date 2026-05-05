@@ -236,8 +236,8 @@ export { AlarmMethod, AttendeeRole, AttendeeStatus, AttendeeType, Availability, 
  * ```
  */
 export const useCalendarPermissions = createPermissionHook({
-    getMethod: getCalendarPermissions,
-    requestMethod: requestCalendarPermissions,
+    getMethod: (options) => getCalendarPermissions(options?.writeOnly),
+    requestMethod: (options) => requestCalendarPermissions(options?.writeOnly),
 });
 /**
  * Check or request permissions to access the user's reminders.

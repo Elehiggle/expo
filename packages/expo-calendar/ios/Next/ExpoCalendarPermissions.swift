@@ -18,12 +18,12 @@ public class ExpoCalendarPermissions {
     }
     var permittedEntities: EKEntityMask = []
     if permissionsManager.hasGrantedPermission(
-      usingRequesterClass: CalendarPermissionsRequester.self) {
+      usingRequesterClass: CalendarNextPermissionsRequester.self) {
       permittedEntities.insert(.event)
     }
 
     if permissionsManager.hasGrantedPermission(
-      usingRequesterClass: RemindersPermissionRequester.self) {
+      usingRequesterClass: RemindersNextPermissionRequester.self) {
       permittedEntities.insert(.reminder)
     }
 
@@ -34,23 +34,35 @@ public class ExpoCalendarPermissions {
     try self.checkPermissions(entity: .event)
   }
 
+  public func checkCalendarWritePermissions() throws {
+    try self.checkPermissions(
+      entity: .event,
+      requester: CalendarWriteOnlyPermissionsRequester.self
+    )
+  }
+
   public func checkRemindersPermissions() throws {
     try self.checkPermissions(entity: .reminder)
   }
 
-  private func checkPermissions(entity: EKEntityType) throws {
+  private func checkPermissions(
+    entity: EKEntityType,
+    requester requestedRequester: EXPermissionsRequester.Type? = nil
+  ) throws {
     guard let permissionsManager = appContext?.permissions else {
       throw PermissionsManagerNotFoundException()
     }
 
-    var requester: EXPermissionsRequester.Type?
-    switch entity {
-    case .event:
-      requester = CalendarPermissionsRequester.self
-    case .reminder:
-      requester = RemindersPermissionRequester.self
-    @unknown default:
-      requester = nil
+    var requester = requestedRequester
+    if requester == nil {
+      switch entity {
+      case .event:
+        requester = CalendarNextPermissionsRequester.self
+      case .reminder:
+        requester = RemindersNextPermissionRequester.self
+      @unknown default:
+        requester = nil
+      }
     }
     if let requester, !permissionsManager.hasGrantedPermission(usingRequesterClass: requester) {
       let message = requester.permissionType().uppercased()

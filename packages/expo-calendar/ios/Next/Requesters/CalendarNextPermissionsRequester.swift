@@ -2,7 +2,7 @@ import ExpoModulesCore
 import EventKit
 internal import React
 
-public class CalendarPermissionsRequester: NSObject, EXPermissionsRequester {
+public class CalendarNextPermissionsRequester: NSObject, EXPermissionsRequester {
   private let eventStore: EKEventStore
 
   init(eventStore: EKEventStore) {
@@ -14,23 +14,12 @@ public class CalendarPermissionsRequester: NSObject, EXPermissionsRequester {
   }
 
   public func getPermissions() -> [AnyHashable: Any] {
-    var status: EXPermissionStatus
-    var permissions: EKAuthorizationStatus
-
-    let description = {
-      if #available(iOS 17.0, *) {
-        return "NSCalendarsFullAccessUsageDescription"
-      }
-      return "NSCalendarsUsageDescription"
-    }()
-
-    if Bundle.main.object(forInfoDictionaryKey: description) != nil {
-      permissions = EKEventStore.authorizationStatus(for: .event)
-    } else {
-      permissions = .denied
+    guard Bundle.main.object(forInfoDictionaryKey: CalendarPlistKeys.calendarFullAccess) != nil else {
+      return ["status": EXPermissionStatusDenied.rawValue, "canAskAgain": false]
     }
 
-    switch permissions {
+    var status: EXPermissionStatus
+    switch EKEventStore.authorizationStatus(for: .event) {
     case .restricted, .denied, .writeOnly:
       status = EXPermissionStatusDenied
     case .notDetermined:
@@ -41,10 +30,14 @@ public class CalendarPermissionsRequester: NSObject, EXPermissionsRequester {
       status = EXPermissionStatusUndetermined
     }
 
-    return ["status": status.rawValue]
+    return ["status": status.rawValue, "canAskAgain": status == EXPermissionStatusUndetermined]
   }
 
   public func requestPermissions(resolver resolve: @escaping EXPromiseResolveBlock, rejecter reject: @escaping EXPromiseRejectBlock) {
+    guard Bundle.main.object(forInfoDictionaryKey: CalendarPlistKeys.calendarFullAccess) != nil else {
+      reject("E_MISSING_PLIST", "Cannot request calendar permissions because \(CalendarPlistKeys.calendarFullAccess) is missing from your Info.plist. Add it via the expo-calendar config plugin or manually.", nil)
+      return
+    }
     if #available(iOS 17.0, *) {
       eventStore.requestFullAccessToEvents { [weak self] _, error in
         guard let self else {

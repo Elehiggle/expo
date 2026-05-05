@@ -10,6 +10,7 @@ import type {
   RecurringEventOptions,
   Reminder,
   ReminderStatus,
+  PermissionResponse,
 } from '../Calendar';
 import InternalExpoCalendar from './ExpoCalendar';
 import { stringifyDateValues, stringifyIfDate, getNullableDetailsFields } from '../utils';
@@ -341,6 +342,7 @@ export {
   createEventInCalendarAsync,
   openEventInCalendarAsync,
 } from '../Calendar';
+
 /**
  * Check or request permissions to access the user's calendars.
  * This uses both `getCalendarPermissions` and `requestCalendarPermissions` to interact
@@ -351,9 +353,12 @@ export {
  * const [status, requestPermission] = Calendar.useCalendarPermissions();
  * ```
  */
-export const useCalendarPermissions = createPermissionHook({
-  getMethod: getCalendarPermissions,
-  requestMethod: requestCalendarPermissions,
+export const useCalendarPermissions = createPermissionHook<
+  PermissionResponse,
+  { writeOnly?: boolean }
+>({
+  getMethod: (options) => getCalendarPermissions(options?.writeOnly),
+  requestMethod: (options) => requestCalendarPermissions(options?.writeOnly),
 });
 
 /**
