@@ -3,7 +3,6 @@ import * as React from 'react';
 import {
   extractPickerItems,
   PickerItem,
-  type PickerWithItems,
   type PickerItemValue,
   type PickerProps,
 } from './types';
@@ -12,7 +11,7 @@ import {
  * A drop-in replacement for `@react-native-picker/picker` on web.
  * Renders a native `<select>` element.
  */
-function PickerImpl<T extends PickerItemValue>(props: PickerProps<T>) {
+export function Picker<T extends PickerItemValue>(props: PickerProps<T>) {
   const { selectedValue, onValueChange, enabled, style, children, ref } = props;
   const items = extractPickerItems<T>(children);
   const selectRef = React.useRef<HTMLSelectElement>(null);
@@ -47,5 +46,4 @@ function PickerImpl<T extends PickerItemValue>(props: PickerProps<T>) {
   );
 }
 
-PickerImpl.displayName = 'Picker';
-export const Picker: PickerWithItems = Object.assign(PickerImpl, { Item: PickerItem });
+Picker.Item = PickerItem;
