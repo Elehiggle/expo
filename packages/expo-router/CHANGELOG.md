@@ -6,6 +6,8 @@
 
 ### 🎉 New features
 
+- [android] forward `accessibilityLabel` on `Stack.Toolbar.Button` and `Stack.Toolbar.Menu` to the icon's `contentDescription`, so TalkBack reads the icon-only toolbar buttons.
+
 ### 🐛 Bug fixes
 
 ### 💡 Others
