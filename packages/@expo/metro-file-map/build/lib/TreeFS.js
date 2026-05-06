@@ -496,8 +496,7 @@ class TreeFS {
                         }
                         parentNode.set(segmentName, segmentNode);
                     }
-                    else if (!opts.skipFallback &&
-                        this.#fallbackFilesystem != null) {
+                    else if (!opts.skipFallback && this.#fallbackFilesystem != null) {
                         parentNode.set(segmentName, segmentNode);
                     }
                 }
